@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - 政企智能舆情分析报告生成智能体应用系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+        }
+        .layui-layout-admin .layui-header {
+            background-color: #1e88e5;
+        }
+        .layui-layout-admin .layui-side {
+            background-color: #2c3e50;
+        }
+        .logo-preview {
+            max-width: 200px;
+            max-height: 200px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            padding: 5px;
+        }
+        .layui-logo {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 15px;
+        }
+        @media (max-width: 768px) {
+            .layui-logo {
+                max-width: 150px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <div class="layui-header">
+            <div class="layui-logo layui-hide-xs" title="政企智能舆情分析报告生成智能体应用系统">政企智能舆情分析报告生成智能体应用系统</div>
+            <ul class="layui-nav layui-layout-left">
+                <li class="layui-nav-item"><a href="/dashboard">返回首页</a></li>
+            </ul>
+            <ul class="layui-nav layui-layout-right">
+                <li class="layui-nav-item"><a href="/logout">退出</a></li>
+            </ul>
+        </div>
+        
+        <div class="layui-body">
+            <div style="padding: 20px;">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2>系统设置</h2>
+                    </div>
+                    <div class="layui-card-body">
+                        <form class="layui-form" id="settingsForm">
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">应用名称</label>
+                                <div class="layui-input-block">
+                                    <input type="text" name="app_name" id="app_name" placeholder="请输入应用名称" class="layui-input" required>
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <label class="layui-form-label">LOGO设置</label>
+                                <div class="layui-input-block">
+                                    <button type="button" class="layui-btn" id="uploadLogo">
+                                        <i class="layui-icon layui-icon-upload"></i> 上传LOGO
+                                    </button>
+                                    <div class="layui-input-inline" style="margin-left: 10px;">
+                                        <input type="text" name="logo_url" id="logo_url" placeholder="LOGO URL或路径" class="layui-input">
+                                    </div>
+                                    <div id="logoPreview"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="layui-form-item">
+                                <div class="layui-input-block">
+                                    <button type="submit" class="layui-btn" lay-submit lay-filter="saveSettings">保存设置</button>
+                                    <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    <script>
+        layui.use(['form', 'layer', 'upload'], function(){
+            var form = layui.form;
+            var layer = layui.layer;
+            var upload = layui.upload;
+            
+            // 加载设置
+            fetch('/api/settings')
+                .then(response => response.json())
+                .then(result => {
+                    if(result.success && result.data){
+                        if(result.data.app_name){
+                            document.getElementById('app_name').value = result.data.app_name.value || '';
+                        }
+                        if(result.data.logo_url){
+                            document.getElementById('logo_url').value = result.data.logo_url.value || '';
+                            if(result.data.logo_url.value){
+                                showLogoPreview(result.data.logo_url.value);
+                            }
+                        }
+                    }
+                });
+            
+            // 上传LOGO
+            upload.render({
+                elem: '#uploadLogo',
+                url: '/api/upload/logo',
+                accept: 'images',
+                done: function(res){
+                    if(res.success){
+                        document.getElementById('logo_url').value = res.url;
+                        showLogoPreview(res.url);
+                        layer.msg('上传成功', {icon: 1});
+                    } else {
+                        layer.msg(res.message || '上传失败', {icon: 2});
+                    }
+                },
+                error: function(){
+                    layer.msg('上传失败，请手动输入LOGO路径', {icon: 2});
+                }
+            });
+            
+            // 显示LOGO预览
+            function showLogoPreview(url){
+                var preview = document.getElementById('logoPreview');
+                preview.innerHTML = '<img src="' + url + '" class="logo-preview" alt="LOGO预览">';
+            }
+            
+            // 监听LOGO URL输入
+            document.getElementById('logo_url').addEventListener('blur', function(){
+                var url = this.value;
+                if(url){
+                    showLogoPreview(url);
+                }
+            });
+            
+            // 保存设置
+            form.on('submit(saveSettings)', function(data){
+                var submitData = {
+                    app_name: data.field.app_name,
+                    logo_url: data.field.logo_url || ''
+                };
+                
+                fetch('/api/settings', {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(submitData)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if(result.success){
+                        layer.msg('保存成功', {icon: 1}, function(){
+                            location.reload();
+                        });
+                    } else {
+                        layer.msg(result.message || '保存失败', {icon: 2});
+                    }
+                });
+                
+                return false;
+            });
+        });
+    </script>
+</body>
+</html>
+

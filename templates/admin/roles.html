@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色管理 - 政企智能舆情分析报告生成智能体应用系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+        }
+        .layui-layout-admin .layui-header {
+            background-color: #1e88e5;
+        }
+        .layui-layout-admin .layui-side {
+            background-color: #2c3e50;
+        }
+        .layui-logo {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 15px;
+        }
+        @media (max-width: 768px) {
+            .layui-logo {
+                max-width: 150px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <div class="layui-header">
+            <div class="layui-logo layui-hide-xs" title="政企智能舆情分析报告生成智能体应用系统">政企智能舆情分析报告生成智能体应用系统</div>
+            <ul class="layui-nav layui-layout-left">
+                <li class="layui-nav-item"><a href="/dashboard">返回首页</a></li>
+            </ul>
+            <ul class="layui-nav layui-layout-right">
+                <li class="layui-nav-item"><a href="/logout">退出</a></li>
+            </ul>
+        </div>
+        
+        <div class="layui-body">
+            <div style="padding: 20px;">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2>角色管理</h2>
+                    </div>
+                    <div class="layui-card-body">
+                        <div style="margin-bottom: 15px;">
+                            <button class="layui-btn" id="btnAdd">
+                                <i class="layui-icon layui-icon-add-1"></i> 添加角色
+                            </button>
+                        </div>
+                        
+                        <table class="layui-hide" id="roleTable" lay-filter="roleTable"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    <script type="text/html" id="toolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+    </script>
+    
+    <script>
+        layui.use(['table', 'form', 'layer'], function(){
+            var table = layui.table;
+            var form = layui.form;
+            var layer = layui.layer;
+            
+            // 渲染表格
+            table.render({
+                elem: '#roleTable',
+                url: '/api/roles',
+                cols: [[
+                    {field: 'id', title: 'ID', width: 80, sort: true},
+                    {field: 'name', title: '角色名称', width: 150},
+                    {field: 'code', title: '角色代码', width: 150},
+                    {field: 'description', title: '描述', width: 300},
+                    {field: 'is_active', title: '状态', width: 100, templet: function(d){
+                        return d.is_active ? '<span style="color: green;">启用</span>' : '<span style="color: red;">禁用</span>';
+                    }},
+                    {field: 'created_at', title: '创建时间', width: 180},
+                    {title: '操作', toolbar: '#toolbar', width: 150, fixed: 'right'}
+                ]],
+                page: true,
+                parseData: function(res){
+                    return {
+                        "code": res.success ? 0 : 1,
+                        "msg": res.message || '',
+                        "count": res.data ? res.data.length : 0,
+                        "data": res.data || []
+                    };
+                }
+            });
+            
+            // 工具栏事件
+            table.on('tool(roleTable)', function(obj){
+                var data = obj.data;
+                if(obj.event === 'del'){
+                    layer.confirm('确定删除角色 ' + data.name + ' 吗？', function(index){
+                        fetch('/api/roles/' + data.id, {
+                            method: 'DELETE'
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if(result.success){
+                                layer.msg('删除成功', {icon: 1});
+                                obj.del();
+                            } else {
+                                layer.msg(result.message || '删除失败', {icon: 2});
+                            }
+                        });
+                        layer.close(index);
+                    });
+                } else if(obj.event === 'edit'){
+                    showRoleForm(data);
+                }
+            });
+            
+            // 添加角色
+            document.getElementById('btnAdd').onclick = function(){
+                showRoleForm();
+            };
+            
+            // 显示角色表单
+            function showRoleForm(data){
+                var isEdit = !!data;
+                var html = '<form class="layui-form" style="padding: 20px;">' +
+                    '<div class="layui-form-item">' +
+                    '<label class="layui-form-label">角色名称</label>' +
+                    '<div class="layui-input-block">' +
+                    '<input type="text" name="name" value="' + (data ? data.name : '') + '" placeholder="请输入角色名称" class="layui-input" required>' +
+                    '</div></div>' +
+                    '<div class="layui-form-item">' +
+                    '<label class="layui-form-label">角色代码</label>' +
+                    '<div class="layui-input-block">' +
+                    '<input type="text" name="code" value="' + (data ? data.code : '') + '" placeholder="请输入角色代码（如：admin）" class="layui-input" required>' +
+                    '</div></div>' +
+                    '<div class="layui-form-item">' +
+                    '<label class="layui-form-label">描述</label>' +
+                    '<div class="layui-input-block">' +
+                    '<textarea name="description" placeholder="请输入角色描述" class="layui-textarea">' + (data ? data.description || '' : '') + '</textarea>' +
+                    '</div></div>' +
+                    '<div class="layui-form-item">' +
+                    '<label class="layui-form-label">状态</label>' +
+                    '<div class="layui-input-block">' +
+                    '<input type="checkbox" name="is_active" lay-skin="switch" lay-text="启用|禁用"' + (data && data.is_active ? ' checked' : '') + '>' +
+                    '</div></div>' +
+                    '</form>';
+                
+                layer.open({
+                    type: 1,
+                    title: isEdit ? '编辑角色' : '添加角色',
+                    content: html,
+                    area: ['500px', 'auto'],
+                    btn: ['确定', '取消'],
+                    yes: function(index, layero){
+                        var formData = new FormData(layero.find('form')[0]);
+                        var submitData = {};
+                        formData.forEach(function(value, key){
+                            if(key === 'is_active'){
+                                submitData[key] = value === 'on';
+                            } else {
+                                submitData[key] = value;
+                            }
+                        });
+                        
+                        var url = isEdit ? '/api/roles/' + data.id : '/api/roles';
+                        var method = isEdit ? 'PUT' : 'POST';
+                        
+                        fetch(url, {
+                            method: method,
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify(submitData)
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if(result.success){
+                                layer.msg(result.message || '操作成功', {icon: 1});
+                                table.reload('roleTable');
+                                layer.close(index);
+                            } else {
+                                layer.msg(result.message || '操作失败', {icon: 2});
+                            }
+                        });
+                    },
+                    success: function(){
+                        form.render();
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

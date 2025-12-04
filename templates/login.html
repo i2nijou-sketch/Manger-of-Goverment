@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>登录 - 政务服务平台</title>
+    
+    <!-- Layui CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Microsoft YaHei", sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .login-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* 左侧蓝色面板 */
+        .left-panel {
+            flex: 1;
+            background: linear-gradient(135deg, #1e88e5 0%, #1565c0 100%);
+            color: white;
+            padding: 60px 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .left-panel::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: pulse 8s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.3; }
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            margin-bottom: 60px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 16px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo-grid {
+            width: 32px;
+            height: 32px;
+            background-image: 
+                linear-gradient(to right, white 2px, transparent 2px),
+                linear-gradient(to bottom, white 2px, transparent 2px);
+            background-size: 8px 8px;
+        }
+        
+        .logo-text {
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .main-title {
+            font-size: 48px;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .description {
+            font-size: 16px;
+            line-height: 1.8;
+            opacity: 0.9;
+            margin-bottom: 60px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .features {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .feature-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 32px;
+        }
+        
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            flex-shrink: 0;
+            backdrop-filter: blur(10px);
+        }
+        
+        .feature-icon svg {
+            width: 24px;
+            height: 24px;
+            fill: white;
+        }
+        
+        .feature-content h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .feature-content p {
+            font-size: 14px;
+            opacity: 0.8;
+            line-height: 1.6;
+        }
+        
+        .left-footer {
+            font-size: 12px;
+            opacity: 0.7;
+            position: relative;
+            z-index: 1;
+        }
+        
+        /* 右侧白色面板 */
+        .right-panel {
+            flex: 1;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px;
+        }
+        
+        .login-form-container {
+            width: 100%;
+            max-width: 420px;
+        }
+        
+        .login-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+        
+        .login-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .form-group {
+            margin-bottom: 24px;
+        }
+        
+        .form-label {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        .form-label-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 8px;
+            color: #1e88e5;
+        }
+        
+        .form-input-wrapper {
+            position: relative;
+        }
+        
+        .form-input {
+            width: 100%;
+            height: 48px;
+            padding: 0 16px 0 48px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #1e88e5;
+            box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
+        }
+        
+        .input-icon {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            color: #999;
+        }
+        
+        .password-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+        
+        .forgot-password {
+            font-size: 14px;
+            color: #1e88e5;
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .forgot-password:hover {
+            color: #1565c0;
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #999;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .password-toggle:hover {
+            color: #666;
+        }
+        
+        .remember-me {
+            display: flex;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .remember-me input {
+            margin-right: 8px;
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .remember-me label {
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+        }
+        
+        .login-button {
+            width: 100%;
+            height: 48px;
+            background: #1e88e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-button:hover {
+            background: #1565c0;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(30, 136, 229, 0.3);
+        }
+        
+        .login-button:active {
+            transform: translateY(0);
+        }
+        
+        .register-link {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .register-link a {
+            color: #1e88e5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .register-link a:hover {
+            text-decoration: underline;
+        }
+        
+        .right-footer {
+            position: absolute;
+            bottom: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+        
+        @media (max-width: 1024px) {
+            .login-container {
+                flex-direction: column;
+            }
+            
+            .left-panel {
+                flex: 0 0 40%;
+                padding: 40px;
+            }
+            
+            .main-title {
+                font-size: 36px;
+            }
+            
+            .right-panel {
+                flex: 1;
+                padding: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <!-- 左侧蓝色面板 -->
+        <div class="left-panel">
+            <div>
+                <div class="logo-section">
+                    <div class="logo">
+                        <div class="logo-grid"></div>
+                    </div>
+                    <div class="logo-text">{{ app_name }}</div>
+                </div>
+                
+                <h1 class="main-title">便捷高效的<br>政务服务体验</h1>
+                
+                <p class="description">
+                    提供安全、高效、便捷的政务服务，让数据多跑路，群众少跑腿，打造智慧政务新体验。
+                </p>
+                
+                <div class="features">
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M12,7C13.4,7 14.8,8.6 14.8,10V11.5C15.4,11.5 16,12.1 16,12.7V16.2C16,16.8 15.4,17.3 14.8,17.3H9.2C8.6,17.3 8,16.8 8,16.2V12.7C8,12.1 8.6,11.5 9.2,11.5V10C9.2,8.6 10.6,7 12,7M12,8.2C11.2,8.2 10.5,8.7 10.5,10V11.5H13.5V10C13.5,8.7 12.8,8.2 12,8.2Z"/>
+                            </svg>
+                        </div>
+                        <div class="feature-content">
+                            <h3>安全可靠</h3>
+                            <p>多重加密保障，确保您的信息安全</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M13,3A9,9 0 0,0 4,12H1L4.96,16.03L9,12H6A7,7 0 0,1 13,5A7,7 0 0,1 20,12A7,7 0 0,1 13,19C11.07,19 9.32,18.21 8.06,16.94L6.64,18.36C8.27,20 10.5,21 13,21A9,9 0 0,0 22,12A9,9 0 0,0 13,3M12,8V13L16.28,15.54L17,14.33L13.5,12.25V8H12Z"/>
+                            </svg>
+                        </div>
+                        <div class="feature-content">
+                            <h3>高效便捷</h3>
+                            <p>简化办事流程，提高政务处理效率</p>
+                        </div>
+                    </div>
+                    
+                    <div class="feature-item">
+                        <div class="feature-icon">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2M16.2,16.2L11,13V7H12.5V12.2L17,14.9L16.2,16.2Z"/>
+                            </svg>
+                        </div>
+                        <div class="feature-content">
+                            <h3>7×24小时服务</h3>
+                            <p>全天候在线，随时为您提供服务</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="left-footer">
+                © 2023 {{ app_name }} 版权所有
+            </div>
+        </div>
+        
+        <!-- 右侧白色面板 -->
+        <div class="right-panel">
+            <div class="login-form-container">
+                <h2 class="login-title">欢迎登录</h2>
+                <p class="login-subtitle">请输入您的账号和密码进行登录</p>
+                
+                <form id="loginForm" method="POST" action="/login">
+                    <div class="form-group">
+                        <label class="form-label">
+                            <svg class="form-label-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            用户名
+                        </label>
+                        <div class="form-input-wrapper">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            <input type="text" name="username" class="form-input" placeholder="请输入用户名" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            <svg class="form-label-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            密码
+                        </label>
+                        <div class="form-input-wrapper">
+                            <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                            </svg>
+                            <input type="password" name="password" id="passwordInput" class="form-input" placeholder="请输入密码" required>
+                            <button type="button" class="password-toggle" id="togglePassword">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="password-actions">
+                            <div></div>
+                            <a href="#" class="forgot-password">忘记密码?</a>
+                        </div>
+                    </div>
+                    
+                    <div class="remember-me">
+                        <input type="checkbox" id="remember" name="remember">
+                        <label for="remember">记住我</label>
+                    </div>
+                    
+                    <button type="submit" class="login-button">
+                        登录 →
+                    </button>
+                </form>
+                
+                <div class="register-link">
+                    还没有账号? <a href="#">立即注册</a>
+                </div>
+            </div>
+            
+            <div class="right-footer">
+                © 2023 {{ app_name }} 版权所有
+            </div>
+        </div>
+    </div>
+    
+    <!-- Layui JS -->
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    
+    <script>
+        // 密码显示/隐藏切换
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const passwordInput = document.getElementById('passwordInput');
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            
+            // 更新图标
+            const icon = this.querySelector('svg');
+            if (type === 'text') {
+                icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line>';
+            } else {
+                icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>';
+            }
+        });
+        
+        // 表单提交
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = {
+                username: formData.get('username'),
+                password: formData.get('password'),
+                remember: formData.get('remember') === 'on'
+            };
+            
+            layui.use(['layer'], function() {
+                var layer = layui.layer;
+                
+                fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        layer.msg('登录成功', {icon: 1}, function() {
+                            window.location.href = result.redirect || '/';
+                        });
+                    } else {
+                        layer.msg(result.message || '登录失败，请检查用户名和密码', {icon: 2});
+                    }
+                })
+                .catch(error => {
+                    layer.msg('登录请求失败，请稍后重试', {icon: 2});
+                    console.error('Error:', error);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

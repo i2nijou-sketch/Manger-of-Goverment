@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据抓取 - 政企智能舆情分析报告生成智能体应用系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+        }
+        .layui-layout-admin .layui-header {
+            background-color: #1e88e5;
+        }
+        .layui-layout-admin .layui-side {
+            background-color: #2c3e50;
+        }
+        .layui-nav-tree .layui-nav-item a {
+            color: #ecf0f1;
+        }
+        .layui-nav-tree .layui-nav-itemed > a, .layui-nav-tree .layui-this > a {
+            background-color: #34495e;
+        }
+        .layui-nav-tree .layui-nav-child dd.layui-this a {
+            background-color: #1e88e5;
+        }
+        .layui-logo {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 15px;
+        }
+        @media (max-width: 768px) {
+            .layui-logo {
+                max-width: 150px;
+                font-size: 14px;
+            }
+        }
+        .search-form {
+            background: white;
+            padding: 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .news-item {
+            background: white;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .news-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .news-title a {
+            color: #1e88e5;
+            text-decoration: none;
+        }
+        .news-title a:hover {
+            text-decoration: underline;
+        }
+        .news-summary {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 10px;
+        }
+        .news-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 12px;
+            color: #999;
+        }
+        .news-cover {
+            max-width: 200px;
+            max-height: 150px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .news-source {
+            color: #1e88e5;
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <div class="layui-header">
+            <div class="layui-logo layui-hide-xs" title="政企智能舆情分析报告生成智能体应用系统">政企智能舆情分析报告生成智能体应用系统</div>
+            <ul class="layui-nav layui-layout-left">
+                <li class="layui-nav-item"><a href="/dashboard">返回首页</a></li>
+            </ul>
+            <ul class="layui-nav layui-layout-right">
+                <li class="layui-nav-item"><a href="/logout">退出</a></li>
+            </ul>
+        </div>
+        
+        <div class="layui-body">
+            <div style="padding: 20px;">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2>数据抓取</h2>
+                    </div>
+                    <div class="layui-card-body">
+                        <!-- 搜索表单 -->
+                        <div class="search-form">
+                            <form class="layui-form" id="searchForm">
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">搜索关键字</label>
+                                    <div class="layui-input-block">
+                                        <input type="text" name="keyword" id="keyword" placeholder="请输入搜索关键字" class="layui-input" required>
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <label class="layui-form-label">结果数量</label>
+                                    <div class="layui-input-block">
+                                        <input type="number" name="max_results" id="max_results" value="10" min="1" max="50" class="layui-input" style="width: 200px;">
+                                    </div>
+                                </div>
+                                <div class="layui-form-item">
+                                    <div class="layui-input-block">
+                                        <button type="submit" class="layui-btn" lay-submit lay-filter="searchBtn">
+                                            <i class="layui-icon layui-icon-search"></i> 开始抓取
+                                        </button>
+                                        <button type="reset" class="layui-btn layui-btn-primary">重置</button>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- 结果区域 -->
+                        <div id="resultArea" style="display: none;">
+                            <div class="layui-card">
+                                <div class="layui-card-header">
+                                    <h3>抓取结果 <span id="resultCount"></span></h3>
+                                </div>
+                                <div class="layui-card-body" id="newsList">
+                                    <!-- 新闻列表将在这里动态生成 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    <script>
+        layui.use(['form', 'layer'], function(){
+            var form = layui.form;
+            var layer = layui.layer;
+            
+            // 表单提交
+            form.on('submit(searchBtn)', function(data){
+                var keyword = data.field.keyword;
+                var max_results = data.field.max_results || 10;
+                
+                if(!keyword){
+                    layer.msg('请输入搜索关键字', {icon: 2});
+                    return false;
+                }
+                
+                // 显示加载
+                var loadIndex = layer.load(2, {time: 0});
+                
+                // 发送请求
+                fetch('/api/crawler/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        keyword: keyword,
+                        max_results: parseInt(max_results)
+                    })
+                })
+                .then(response => response.json())
+                .then(result => {
+                    layer.close(loadIndex);
+                    
+                    if(result.success){
+                        displayResults(result.data, result.count);
+                        layer.msg(result.message || '抓取成功', {icon: 1});
+                    } else {
+                        layer.msg(result.message || '抓取失败', {icon: 2});
+                        document.getElementById('resultArea').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    layer.close(loadIndex);
+                    layer.msg('请求失败：' + error, {icon: 2});
+                    document.getElementById('resultArea').style.display = 'none';
+                });
+                
+                return false;
+            });
+            
+            // 显示结果
+            function displayResults(newsList, count){
+                var resultArea = document.getElementById('resultArea');
+                var newsListDiv = document.getElementById('newsList');
+                var resultCount = document.getElementById('resultCount');
+                
+                resultCount.textContent = '(共 ' + count + ' 条)';
+                newsListDiv.innerHTML = '';
+                
+                if(newsList && newsList.length > 0){
+                    newsList.forEach(function(news, index){
+                        var newsHtml = '<div class="news-item">';
+                        newsHtml += '<div class="news-title">';
+                        if(news.url){
+                            newsHtml += '<a href="' + news.url + '" target="_blank">' + (news.title || '无标题') + '</a>';
+                        } else {
+                            newsHtml += news.title || '无标题';
+                        }
+                        newsHtml += '</div>';
+                        
+                        if(news.summary){
+                            newsHtml += '<div class="news-summary">' + news.summary + '</div>';
+                        }
+                        
+                        newsHtml += '<div class="news-meta">';
+                        if(news.source){
+                            newsHtml += '<span class="news-source">来源：' + news.source + '</span>';
+                        }
+                        if(news.url){
+                            newsHtml += '<span>URL：<a href="' + news.url + '" target="_blank" style="color: #1e88e5;">查看原文</a></span>';
+                        }
+                        newsHtml += '</div>';
+                        
+                        if(news.cover){
+                            newsHtml += '<div><img src="' + news.cover + '" class="news-cover" alt="封面" onerror="this.style.display=\'none\'"></div>';
+                        }
+                        
+                        newsHtml += '</div>';
+                        newsListDiv.innerHTML += newsHtml;
+                    });
+                } else {
+                    newsListDiv.innerHTML = '<div style="text-align: center; padding: 40px; color: #999;">未找到相关数据</div>';
+                }
+                
+                resultArea.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
+

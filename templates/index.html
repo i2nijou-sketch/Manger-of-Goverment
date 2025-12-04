@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}首页 - 系统{% endblock %}
+
+{% block content %}
+<div class="layui-container">
+    <div class="layui-row">
+        <div class="layui-col-md12">
+            <div class="layui-card">
+                <div class="layui-card-header">
+                    <h2>系统首页</h2>
+                </div>
+                <div class="layui-card-body">
+                    <p>欢迎使用系统！</p>
+                    <p>技术栈：B/S + Ayu + Python3 + Flask + SQLite</p>
+                    <div style="margin-top: 20px;">
+                        <button class="layui-btn" onclick="checkHealth()">检查系统状态</button>
+                    </div>
+                    <div id="health-result" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+layui.use(['layer'], function(){
+    var layer = layui.layer;
+    
+    window.checkHealth = function() {
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                var resultDiv = document.getElementById('health-result');
+                if (data.status === 'ok') {
+                    resultDiv.innerHTML = '<div class="layui-alert layui-alert-success">' +
+                        '<i class="layui-icon layui-icon-ok"></i> ' +
+                        data.message + '</div>';
+                } else {
+                    resultDiv.innerHTML = '<div class="layui-alert layui-alert-danger">系统异常</div>';
+                }
+            })
+            .catch(error => {
+                var resultDiv = document.getElementById('health-result');
+                resultDiv.innerHTML = '<div class="layui-alert layui-alert-danger">请求失败：' + error + '</div>';
+            });
+    };
+});
+</script>
+{% endblock %}
+

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 政企智能舆情分析报告生成智能体应用系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='layui/css/layui.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #f2f2f2;
+        }
+        .layui-layout-admin .layui-header {
+            background-color: #1e88e5;
+        }
+        .layui-layout-admin .layui-side {
+            background-color: #2c3e50;
+        }
+        .layui-nav-tree .layui-nav-item a {
+            color: #ecf0f1;
+        }
+        .layui-nav-tree .layui-nav-itemed > a, .layui-nav-tree .layui-this > a {
+            background-color: #34495e;
+        }
+        .layui-nav-tree .layui-nav-child dd.layui-this a {
+            background-color: #1e88e5;
+        }
+        .user-info {
+            color: white;
+            padding: 0 20px;
+            line-height: 60px;
+        }
+        .layui-logo {
+            max-width: 300px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding: 0 15px;
+        }
+        @media (max-width: 768px) {
+            .layui-logo {
+                max-width: 150px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="layui-layout layui-layout-admin">
+        <div class="layui-header">
+            <div class="layui-logo layui-hide-xs" title="政企智能舆情分析报告生成智能体应用系统">政企智能舆情分析报告生成智能体应用系统</div>
+            <ul class="layui-nav layui-layout-left">
+                <li class="layui-nav-item"><a href="/dashboard">返回首页</a></li>
+            </ul>
+            <ul class="layui-nav layui-layout-right">
+                <li class="layui-nav-item"><a href="/logout">退出</a></li>
+            </ul>
+        </div>
+        
+        <div class="layui-body">
+            <div style="padding: 20px;">
+                <div class="layui-card">
+                    <div class="layui-card-header">
+                        <h2>用户管理</h2>
+                    </div>
+                    <div class="layui-card-body">
+                        <div style="margin-bottom: 15px;">
+                            <button class="layui-btn" id="btnAdd">
+                                <i class="layui-icon layui-icon-add-1"></i> 添加用户
+                            </button>
+                        </div>
+                        
+                        <table class="layui-hide" id="userTable" lay-filter="userTable"></table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='layui/layui.js') }}"></script>
+    <script type="text/html" id="toolbar">
+        <a class="layui-btn layui-btn-xs" lay-event="edit">编辑</a>
+        <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+    </script>
+    
+    <script>
+        layui.use(['table', 'form', 'layer'], function(){
+            var table = layui.table;
+            var form = layui.form;
+            var layer = layui.layer;
+            
+            // 渲染表格
+            table.render({
+                elem: '#userTable',
+                url: '/api/users',
+                cols: [[
+                    {field: 'id', title: 'ID', width: 80, sort: true},
+                    {field: 'username', title: '用户名', width: 150},
+                    {field: 'real_name', title: '真实姓名', width: 150},
+                    {field: 'email', title: '邮箱', width: 200},
+                    {field: 'phone', title: '手机号', width: 150},
+                    {field: 'role_name', title: '角色', width: 120},
+                    {field: 'is_active', title: '状态', width: 100, templet: function(d){
+                        return d.is_active ? '<span style="color: green;">启用</span>' : '<span style="color: red;">禁用</span>';
+                    }},
+                    {field: 'created_at', title: '创建时间', width: 180},
+                    {title: '操作', toolbar: '#toolbar', width: 150, fixed: 'right'}
+                ]],
+                page: true,
+                parseData: function(res){
+                    return {
+                        "code": res.success ? 0 : 1,
+                        "msg": res.message || '',
+                        "count": res.data ? res.data.length : 0,
+                        "data": res.data || []
+                    };
+                }
+            });
+            
+            // 工具栏事件
+            table.on('tool(userTable)', function(obj){
+                var data = obj.data;
+                if(obj.event === 'del'){
+                    layer.confirm('确定删除用户 ' + data.username + ' 吗？', function(index){
+                        fetch('/api/users/' + data.id, {
+                            method: 'DELETE'
+                        })
+                        .then(response => response.json())
+                        .then(result => {
+                            if(result.success){
+                                layer.msg('删除成功', {icon: 1});
+                                obj.del();
+                            } else {
+                                layer.msg(result.message || '删除失败', {icon: 2});
+                            }
+                        });
+                        layer.close(index);
+                    });
+                } else if(obj.event === 'edit'){
+                    showUserForm(data);
+                }
+            });
+            
+            // 添加用户
+            document.getElementById('btnAdd').onclick = function(){
+                showUserForm();
+            };
+            
+            // 显示用户表单
+            function showUserForm(data){
+                var isEdit = !!data;
+                fetch('/api/roles')
+                    .then(response => response.json())
+                    .then(rolesResult => {
+                        var roles = rolesResult.data || [];
+                        var roleOptions = roles.map(r => '<option value="' + r.id + '">' + r.name + '</option>').join('');
+                        
+                        var html = '<form class="layui-form" style="padding: 20px;">' +
+                            '<div class="layui-form-item">' +
+                            '<label class="layui-form-label">用户名</label>' +
+                            '<div class="layui-input-block">' +
+                            '<input type="text" name="username" value="' + (data ? data.username : '') + '" placeholder="请输入用户名" class="layui-input" required>' +
+                            '</div></div>' +
+                            '<div class="layui-form-item">' +
+                            '<label class="layui-form-label">密码' + (isEdit ? '（留空不修改）' : '') + '</label>' +
+                            '<div class="layui-input-block">' +
+                            '<input type="password" name="password" placeholder="请输入密码" class="layui-input"' + (isEdit ? '' : ' required') + '>' +
+                            '</div></div>' +
+                            '<div class="layui-form-item">' +
+                            '<label class="layui-form-label">真实姓名</label>' +
+                            '<div class="layui-input-block">' +
+                            '<input type="text" name="real_name" value="' + (data ? data.real_name || '' : '') + '" placeholder="请输入真实姓名" class="layui-input">' +
+                            '</div></div>' +
+                            '<div class="layui-form-item">' +
+                            '<label class="layui-form-label">邮箱</label>' +
+                            '<div class="layui-input-block">' +
+                            '<input type="email" name="email" value="' + (data ? data.email || '' : '') + '" placeholder="请输入邮箱" class="layui-input">' +
+                            '</div></div>' +
+                            '<div class="layui-form-item">' +
+                            '<label class="layui-form-label">手机号</label>' +
+                            '<div class="layui-input-block">' +
+                            '<input type="text" name="phone" value="' + (data ? data.phone || '' : '') + '" placeholder="请输入手机号" class="layui-input">' +
+                            '</div></div>' +
+                            '<div class="layui-form-item">' +
+                            '<label class="layui-form-label">角色</label>' +
+                            '<div class="layui-input-block">' +
+                            '<select name="role_id" lay-verify="required">' + roleOptions + '</select>' +
+                            '</div></div>' +
+                            '<div class="layui-form-item">' +
+                            '<label class="layui-form-label">状态</label>' +
+                            '<div class="layui-input-block">' +
+                            '<input type="checkbox" name="is_active" lay-skin="switch" lay-text="启用|禁用"' + (data && data.is_active ? ' checked' : '') + '>' +
+                            '</div></div>' +
+                            '</form>';
+                        
+                        layer.open({
+                            type: 1,
+                            title: isEdit ? '编辑用户' : '添加用户',
+                            content: html,
+                            area: ['500px', 'auto'],
+                            btn: ['确定', '取消'],
+                            yes: function(index, layero){
+                                var formData = new FormData(layero.find('form')[0]);
+                                var submitData = {};
+                                formData.forEach(function(value, key){
+                                    if(key === 'is_active'){
+                                        submitData[key] = value === 'on';
+                                    } else {
+                                        submitData[key] = value;
+                                    }
+                                });
+                                
+                                var url = isEdit ? '/api/users/' + data.id : '/api/users';
+                                var method = isEdit ? 'PUT' : 'POST';
+                                
+                                fetch(url, {
+                                    method: method,
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify(submitData)
+                                })
+                                .then(response => response.json())
+                                .then(result => {
+                                    if(result.success){
+                                        layer.msg(result.message || '操作成功', {icon: 1});
+                                        table.reload('userTable');
+                                        layer.close(index);
+                                    } else {
+                                        layer.msg(result.message || '操作失败', {icon: 2});
+                                    }
+                                });
+                            },
+                            success: function(layero, index){
+                                form.render();
+                                if(isEdit && data.role_id){
+                                    layero.find('select[name="role_id"]').val(data.role_id);
+                                    form.render('select');
+                                }
+                            }
+                        });
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
+
