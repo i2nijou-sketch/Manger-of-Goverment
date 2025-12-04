@@ -165,31 +165,59 @@ class BaiduNewsCrawler:
             
             news_list = []
             
-            # 尝试最简单的方法：直接提取所有a标签的文本和链接
-            all_links = soup.find_all('a', href=True)
+            # 尝试找到新闻列表容器
+            # 常见的百度新闻容器类
+            news_containers = []
             
-            for link in all_links:
+            # 方法1: 查找所有可能的新闻容器
+            possible_containers = soup.find_all(['div', 'li'], class_=re.compile(r'news|content|item|list|article|result'))
+            
+            for container in possible_containers:
+                # 查找容器中的标题（h3标签，通常包含新闻标题）
+                title_elem = container.find('h3')
+                if title_elem:
+                    # 查找标题中的链接
+                    title_link = title_elem.find('a', href=True)
+                    if title_link:
+                        # 提取标题文本
+                        title_text = title_link.get_text(strip=True)
+                        # 过滤掉太短的标题
+                        if len(title_text) >= 5:
+                            # 解析新闻项
+                            news_item = self._parse_news_item_from_container(container, title_text, title_link)
+                            if news_item:
+                                # 检查是否重复
+                                if not any(n.get('title') == news_item.get('title') for n in news_list):
+                                    news_list.append(news_item)
+                                
+                                # 如果达到最大结果数，停止
+                                if len(news_list) >= max_results:
+                                    break
+                
+                # 如果达到最大结果数，停止
                 if len(news_list) >= max_results:
                     break
+            
+            # 如果没有找到足够的新闻，尝试备用方法
+            if len(news_list) < max_results:
+                # 方法2: 直接查找所有h3标签，因为百度新闻的标题通常用h3
+                h3_tags = soup.find_all('h3')
                 
-                # 查找标题文本
-                title_text = link.get_text(strip=True)
-                # 过滤掉太短的标题
-                if len(title_text) < 10:
-                    continue
-                
-                # 构建基本的新闻项
-                news_item = {
-                    'title': title_text,
-                    'url': link['href'],
-                    'source': '',
-                    'summary': '',
-                    'cover': ''
-                }
-                
-                # 检查是否重复
-                if not any(n.get('title') == news_item.get('title') for n in news_list):
-                    news_list.append(news_item)
+                for h3 in h3_tags:
+                    if len(news_list) >= max_results:
+                        break
+                    
+                    link = h3.find('a', href=True)
+                    if link:
+                        title_text = link.get_text(strip=True)
+                        if len(title_text) >= 5:
+                            # 尝试找到h3的父容器，因为来源、摘要等信息通常在父容器中
+                            container = h3.find_parent('div') or h3.find_parent('li') or h3
+                            
+                            news_item = self._parse_news_item_from_container(container, title_text, link)
+                            if news_item:
+                                if not any(n.get('title') == news_item.get('title') for n in news_list):
+                                    news_list.append(news_item)
             
             return news_list
             
